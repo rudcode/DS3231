@@ -141,20 +141,20 @@ uint32_t DateTime::unixtime(void) const {
 static uint8_t bcd2bin (uint8_t val) { return val - 6 * (val >> 4); }
 static uint8_t bin2bcd (uint8_t val) { return val + 6 * (val / 10); }
 
-DateTime RTClib::now() {
-  Wire.beginTransmission(CLOCK_ADDRESS);
-  Wire.write(0);	// This is the first register address (Seconds)
+DateTime DS3231::now() {
+  _i2c->beginTransmission(CLOCK_ADDRESS);
+  _i2c->write(0);	// This is the first register address (Seconds)
   			// We'll read from here on for 7 bytes: secs reg, minutes reg, hours, days, months and years.
-  Wire.endTransmission();
+  _i2c->endTransmission();
   
-  Wire.requestFrom(CLOCK_ADDRESS, 7);
-  uint8_t ss = bcd2bin(Wire.read() & 0x7F);
-  uint8_t mm = bcd2bin(Wire.read());
-  uint8_t hh = bcd2bin(Wire.read());
-  Wire.read();
-  uint8_t d = bcd2bin(Wire.read());
-  uint8_t m = bcd2bin(Wire.read());
-  uint16_t y = bcd2bin(Wire.read()) + 2000;
+  _i2c->requestFrom(CLOCK_ADDRESS, 7);
+  uint8_t ss = bcd2bin(_i2c->read() & 0x7F);
+  uint8_t mm = bcd2bin(_i2c->read());
+  uint8_t hh = bcd2bin(_i2c->read());
+  _i2c->read();
+  uint8_t d = bcd2bin(_i2c->read());
+  uint8_t m = bcd2bin(_i2c->read());
+  uint16_t y = bcd2bin(_i2c->read()) + 2000;
   
   return DateTime (y, m, d, hh, mm, ss);
 }
@@ -162,32 +162,32 @@ DateTime RTClib::now() {
 ///// ERIC'S ORIGINAL CODE FOLLOWS /////
 
 byte DS3231::getSecond() {
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x00);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x00);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	return bcdToDec(Wire.read());
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	return bcdToDec(_i2c->read());
 }
 
 byte DS3231::getMinute() {
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x01);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x01);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	return bcdToDec(Wire.read());
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	return bcdToDec(_i2c->read());
 }
 
 byte DS3231::getHour(bool& h12, bool& PM_time) {
 	byte temp_buffer;
 	byte hour;
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x02);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x02);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	temp_buffer = Wire.read();
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	temp_buffer = _i2c->read();
 	h12 = temp_buffer & 0b01000000;
 	if (h12) {
 		PM_time = temp_buffer & 0b00100000;
@@ -199,53 +199,57 @@ byte DS3231::getHour(bool& h12, bool& PM_time) {
 }
 
 byte DS3231::getDoW() {
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x03);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x03);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	return bcdToDec(Wire.read());
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	return bcdToDec(_i2c->read());
 }
 
 byte DS3231::getDate() {
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x04);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x04);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	return bcdToDec(Wire.read());
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	return bcdToDec(_i2c->read());
 }
 
 byte DS3231::getMonth(bool& Century) {
 	byte temp_buffer;
 	byte hour;
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x05);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x05);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	temp_buffer = Wire.read();
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	temp_buffer = _i2c->read();
 	Century = temp_buffer & 0b10000000;
 	return (bcdToDec(temp_buffer & 0b01111111)) ;
 }
 
 byte DS3231::getYear() {
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x06);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x06);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	return bcdToDec(Wire.read());
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	return bcdToDec(_i2c->read());
+}
+
+void DS3231::setWire(WireBase *i2c) {
+    _i2c = i2c;
 }
 
 void DS3231::setSecond(byte Second) {
 	// Sets the seconds 
 	// This function also resets the Oscillator Stop Flag, which is set
 	// whenever power is interrupted.
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x00);
-	Wire.write(decToBcd(Second));	
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x00);
+	_i2c->write(decToBcd(Second));	
+	_i2c->endTransmission();
 	// Clear OSF flag
 	byte temp_buffer = readControlByte(1);
 	writeControlByte((temp_buffer & 0b01111111), 1);
@@ -253,10 +257,10 @@ void DS3231::setSecond(byte Second) {
 
 void DS3231::setMinute(byte Minute) {
 	// Sets the minutes 
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x01);
-	Wire.write(decToBcd(Minute));	
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x01);
+	_i2c->write(decToBcd(Minute));	
+	_i2c->endTransmission();
 }
 
 void DS3231::setHour(byte Hour) {
@@ -266,11 +270,11 @@ void DS3231::setHour(byte Hour) {
 	bool h12;
 
 	// Start by figuring out what the 12/24 mode is
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x02);
-	Wire.endTransmission();
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	h12 = (Wire.read() & 0b01000000);
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x02);
+	_i2c->endTransmission();
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	h12 = (_i2c->read() & 0b01000000);
 	// if h12 is true, it's 12h mode; false is 24h.
 
 	if (h12) {
@@ -285,42 +289,42 @@ void DS3231::setHour(byte Hour) {
 		Hour = decToBcd(Hour) & 0b10111111;
 	}
 
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x02);
-	Wire.write(Hour);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x02);
+	_i2c->write(Hour);
+	_i2c->endTransmission();
 }
 
 void DS3231::setDoW(byte DoW) {
 	// Sets the Day of Week
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x03);
-	Wire.write(decToBcd(DoW));	
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x03);
+	_i2c->write(decToBcd(DoW));	
+	_i2c->endTransmission();
 }
 
 void DS3231::setDate(byte Date) {
 	// Sets the Date
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x04);
-	Wire.write(decToBcd(Date));	
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x04);
+	_i2c->write(decToBcd(Date));	
+	_i2c->endTransmission();
 }
 
 void DS3231::setMonth(byte Month) {
 	// Sets the month
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x05);
-	Wire.write(decToBcd(Month));	
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x05);
+	_i2c->write(decToBcd(Month));	
+	_i2c->endTransmission();
 }
 
 void DS3231::setYear(byte Year) {
 	// Sets the year
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x06);
-	Wire.write(decToBcd(Year));	
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x06);
+	_i2c->write(decToBcd(Year));	
+	_i2c->endTransmission();
 }
 
 void DS3231::setClockMode(bool h12) {
@@ -336,11 +340,11 @@ void DS3231::setClockMode(bool h12) {
 	byte temp_buffer;
 
 	// Start by reading byte 0x02.
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x02);
-	Wire.endTransmission();
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	temp_buffer = Wire.read();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x02);
+	_i2c->endTransmission();
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	temp_buffer = _i2c->read();
 
 	// Set the flag to the requested value:
 	if (h12) {
@@ -350,10 +354,10 @@ void DS3231::setClockMode(bool h12) {
 	}
 
 	// Write the byte
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x02);
-	Wire.write(temp_buffer);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x02);
+	_i2c->write(temp_buffer);
+	_i2c->endTransmission();
 }
 
 float DS3231::getTemperature() {
@@ -367,15 +371,15 @@ float DS3231::getTemperature() {
   float temp3231;
   
   // temp registers (11h-12h) get updated automatically every 64s
-  Wire.beginTransmission(CLOCK_ADDRESS);
-  Wire.write(0x11);
-  Wire.endTransmission();
-  Wire.requestFrom(CLOCK_ADDRESS, 2);
+  _i2c->beginTransmission(CLOCK_ADDRESS);
+  _i2c->write(0x11);
+  _i2c->endTransmission();
+  _i2c->requestFrom(CLOCK_ADDRESS, 2);
 
   // Should I do more "if available" checks here?
-  if(Wire.available()) {
-    tMSB = Wire.read(); //2's complement int portion
-    tLSB = Wire.read(); //fraction portion
+  if(_i2c->available()) {
+    tMSB = _i2c->read(); //2's complement int portion
+    tLSB = _i2c->read(); //fraction portion
 
     temp3231 = ((((short)tMSB << 8) | (short)tLSB) >> 6) / 4.0;
   }
@@ -388,23 +392,23 @@ float DS3231::getTemperature() {
 
 void DS3231::getA1Time(byte& A1Day, byte& A1Hour, byte& A1Minute, byte& A1Second, byte& AlarmBits, bool& A1Dy, bool& A1h12, bool& A1PM) {
 	byte temp_buffer;
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x07);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x07);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 4);
+	_i2c->requestFrom(CLOCK_ADDRESS, 4);
 
-	temp_buffer	= Wire.read();	// Get A1M1 and A1 Seconds
+	temp_buffer	= _i2c->read();	// Get A1M1 and A1 Seconds
 	A1Second	= bcdToDec(temp_buffer & 0b01111111);
 	// put A1M1 bit in position 0 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>7;
 
-	temp_buffer		= Wire.read();	// Get A1M2 and A1 minutes
+	temp_buffer		= _i2c->read();	// Get A1M2 and A1 minutes
 	A1Minute	= bcdToDec(temp_buffer & 0b01111111);
 	// put A1M2 bit in position 1 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>6;
 
-	temp_buffer	= Wire.read();	// Get A1M3 and A1 Hour
+	temp_buffer	= _i2c->read();	// Get A1M3 and A1 Hour
 	// put A1M3 bit in position 2 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>5;
 	// determine A1 12/24 mode
@@ -416,7 +420,7 @@ void DS3231::getA1Time(byte& A1Day, byte& A1Hour, byte& A1Minute, byte& A1Second
 		A1Hour	= bcdToDec(temp_buffer & 0b00111111);	// 24-hour
 	}
 
-	temp_buffer	= Wire.read();	// Get A1M4 and A1 Day/Date
+	temp_buffer	= _i2c->read();	// Get A1M4 and A1 Day/Date
 	// put A1M3 bit in position 3 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>4;
 	// determine A1 day or date flag
@@ -432,17 +436,17 @@ void DS3231::getA1Time(byte& A1Day, byte& A1Hour, byte& A1Minute, byte& A1Second
 
 void DS3231::getA2Time(byte& A2Day, byte& A2Hour, byte& A2Minute, byte& AlarmBits, bool& A2Dy, bool& A2h12, bool& A2PM) {
 	byte temp_buffer;
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x0b);
-	Wire.endTransmission();
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x0b);
+	_i2c->endTransmission();
 
-	Wire.requestFrom(CLOCK_ADDRESS, 3); 
-	temp_buffer	= Wire.read();	// Get A2M2 and A2 Minutes
+	_i2c->requestFrom(CLOCK_ADDRESS, 3); 
+	temp_buffer	= _i2c->read();	// Get A2M2 and A2 Minutes
 	A2Minute	= bcdToDec(temp_buffer & 0b01111111);
 	// put A2M2 bit in position 4 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>3;
 
-	temp_buffer	= Wire.read();	// Get A2M3 and A2 Hour
+	temp_buffer	= _i2c->read();	// Get A2M3 and A2 Hour
 	// put A2M3 bit in position 5 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>2;
 	// determine A2 12/24 mode
@@ -454,7 +458,7 @@ void DS3231::getA2Time(byte& A2Day, byte& A2Hour, byte& A2Minute, byte& AlarmBit
 		A2Hour	= bcdToDec(temp_buffer & 0b00111111);	// 24-hour
 	}
 
-	temp_buffer	= Wire.read();	// Get A2M4 and A1 Day/Date
+	temp_buffer	= _i2c->read();	// Get A2M4 and A1 Day/Date
 	// put A2M4 bit in position 6 of DS3231_AlarmBits.
 	AlarmBits	= AlarmBits | (temp_buffer & 0b10000000)>>1;
 	// determine A2 day or date flag
@@ -471,12 +475,12 @@ void DS3231::getA2Time(byte& A2Day, byte& A2Hour, byte& A2Minute, byte& AlarmBit
 void DS3231::setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, byte AlarmBits, bool A1Dy, bool A1h12, bool A1PM) {
 	//	Sets the alarm-1 date and time on the DS3231, using A1* information
 	byte temp_buffer;
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x07);	// A1 starts at 07h
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x07);	// A1 starts at 07h
 	// Send A1 second and A1M1
-	Wire.write(decToBcd(A1Second) | ((AlarmBits & 0b00000001) << 7));
+	_i2c->write(decToBcd(A1Second) | ((AlarmBits & 0b00000001) << 7));
 	// Send A1 Minute and A1M2
-	Wire.write(decToBcd(A1Minute) | ((AlarmBits & 0b00000010) << 6));
+	_i2c->write(decToBcd(A1Minute) | ((AlarmBits & 0b00000010) << 6));
 	// Figure out A1 hour 
 	if (A1h12) {
 		// Start by converting existing time to h12 if it was given in 24h.
@@ -500,25 +504,25 @@ void DS3231::setA1Time(byte A1Day, byte A1Hour, byte A1Minute, byte A1Second, by
 	}
 	temp_buffer = temp_buffer | ((AlarmBits & 0b00000100)<<5);
 	// A1 hour is figured out, send it
-	Wire.write(temp_buffer); 
+	_i2c->write(temp_buffer); 
 	// Figure out A1 day/date and A1M4
 	temp_buffer = ((AlarmBits & 0b00001000)<<4) | decToBcd(A1Day);
 	if (A1Dy) {
 		// Set A1 Day/Date flag (Otherwise it's zero)
 		temp_buffer = temp_buffer | 0b01000000;
 	}
-	Wire.write(temp_buffer);
+	_i2c->write(temp_buffer);
 	// All done!
-	Wire.endTransmission();
+	_i2c->endTransmission();
 }
 
 void DS3231::setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, bool A2Dy, bool A2h12, bool A2PM) {
 	//	Sets the alarm-2 date and time on the DS3231, using A2* information
 	byte temp_buffer;
-	Wire.beginTransmission(CLOCK_ADDRESS);
-	Wire.write(0x0b);	// A1 starts at 0bh
+	_i2c->beginTransmission(CLOCK_ADDRESS);
+	_i2c->write(0x0b);	// A1 starts at 0bh
 	// Send A2 Minute and A2M2
-	Wire.write(decToBcd(A2Minute) | ((AlarmBits & 0b00010000) << 3));
+	_i2c->write(decToBcd(A2Minute) | ((AlarmBits & 0b00010000) << 3));
 	// Figure out A2 hour 
 	if (A2h12) {
 		// Start by converting existing time to h12 if it was given in 24h.
@@ -543,16 +547,16 @@ void DS3231::setA2Time(byte A2Day, byte A2Hour, byte A2Minute, byte AlarmBits, b
 	// add in A2M3 bit
 	temp_buffer = temp_buffer | ((AlarmBits & 0b00100000)<<2);
 	// A2 hour is figured out, send it
-	Wire.write(temp_buffer); 
+	_i2c->write(temp_buffer); 
 	// Figure out A2 day/date and A2M4
 	temp_buffer = ((AlarmBits & 0b01000000)<<1) | decToBcd(A2Day);
 	if (A2Dy) {
 		// Set A2 Day/Date flag (Otherwise it's zero)
 		temp_buffer = temp_buffer | 0b01000000;
 	}
-	Wire.write(temp_buffer);
+	_i2c->write(temp_buffer);
 	// All done!
-	Wire.endTransmission();
+	_i2c->endTransmission();
 }
 
 void DS3231::turnOnAlarm(byte Alarm) {
@@ -688,29 +692,29 @@ byte DS3231::bcdToDec(byte val) {
 byte DS3231::readControlByte(bool which) {
 	// Read selected control byte
 	// first byte (0) is 0x0e, second (1) is 0x0f
-	Wire.beginTransmission(CLOCK_ADDRESS);
+	_i2c->beginTransmission(CLOCK_ADDRESS);
 	if (which) {
 		// second control byte
-		Wire.write(0x0f);
+		_i2c->write(0x0f);
 	} else {
 		// first control byte
-		Wire.write(0x0e);
+		_i2c->write(0x0e);
 	}
-	Wire.endTransmission();
-	Wire.requestFrom(CLOCK_ADDRESS, 1);
-	return Wire.read();	
+	_i2c->endTransmission();
+	_i2c->requestFrom(CLOCK_ADDRESS, 1);
+	return _i2c->read();	
 }
 
 void DS3231::writeControlByte(byte control, bool which) {
 	// Write the selected control byte.
 	// which=false -> 0x0e, true->0x0f.
-	Wire.beginTransmission(CLOCK_ADDRESS);
+	_i2c->beginTransmission(CLOCK_ADDRESS);
 	if (which) {
-		Wire.write(0x0f);
+		_i2c->write(0x0f);
 	} else {
-		Wire.write(0x0e);
+		_i2c->write(0x0e);
 	}
-	Wire.write(control);
-	Wire.endTransmission();
+	_i2c->write(control);
+	_i2c->endTransmission();
 }
 

@@ -50,12 +50,6 @@ protected:
     uint8_t yOff, m, d, hh, mm, ss;
 };
 
-class RTClib {
-  public:
-		// Get date and time snapshot
-    static DateTime now();
-};
-
 // Eric's original code is everything below this line
 class DS3231 {
 	public:
@@ -77,7 +71,10 @@ class DS3231 {
 			// Also sets the flag indicating century roll-over.
 		byte getYear(); 
 			// Last 2 digits only
+            
+        DateTime now();
 
+        void setWire(WireBase *i2c);
 		// Time-setting functions
 		// Note that none of these check for sensibility: You can set the
 		// date to July 42nd and strange things will probably result.
@@ -177,6 +174,8 @@ class DS3231 {
 		void writeControlByte(byte control, bool which); 
 			// Write the selected control byte. 
 			// which == false -> 0x0e, true->0x0f.
+            
+        WireBase *_i2c;
 
 };
 
